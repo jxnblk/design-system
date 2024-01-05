@@ -1,17 +1,18 @@
+import propTypes from '@styled-system/prop-types'
+import PropTypes from 'prop-types'
 import React from 'react'
 import styled from 'styled-components'
-import { AlignItemsProps, JustifyContentProps, FontSizeProps, PaddingProps, MarginProps } from 'styled-system'
-import PropTypes from 'prop-types'
-import propTypes from '@styled-system/prop-types'
+import { AlignItemsProps, FontSizeProps, JustifyContentProps, MarginProps, PaddingProps } from 'styled-system'
 
 import { Banner } from '../Banner'
 import { Box } from '../Box'
+import { Button } from '../Button'
+import { CloseButton } from '../CloseButton'
 import { Flex } from '../Flex'
 import { Link } from '../Link'
 import { Relative } from '../Relative'
-import { Button } from '../Button'
-import { colorSchemeCustomForeground } from '../utils'
-import { ColorSchemeName } from '../theme'
+import { ColorSchemeName, mediaQueries } from '../theme'
+import { colorSchemeCustomForeground, getPaletteColor } from '../utils'
 
 const BannerWithRadius = styled(Banner)`
   cursor: ${(props) => (props.onClick ? 'pointer' : 'cursor')};
@@ -37,6 +38,47 @@ const CustomLink = styled(Link)`
 const CustomButton = styled(Button)`
   z-index: 2;
   text-decoration: ${(props) => (props.buttonTextUnderline ? 'underline' : 'none')};
+`
+
+const BannerContent = styled(Box)`
+  flex: 1;
+
+  ${mediaQueries[2]} {
+    flex: unset;
+  }
+`
+
+const StyledCloseButton = styled(Box)`
+  align-self: ${(props) => (props.closeButtonVerticalPosition === 'top' ? 'flex-start' : 'center')};
+  cursor: pointer;
+  line-height: 0;
+  padding: 0;
+  margin: 0;
+  margin-${({ closeButtonHorizontalPosition, selfPosition }) =>
+    closeButtonHorizontalPosition === selfPosition && closeButtonHorizontalPosition === 'left'
+      ? 'right'
+      : 'left'}: auto;
+    z-index: 2;
+    
+  & > button {
+    margin-${(props) => (props.closeButtonHorizontalPosition === 'left' ? 'right' : 'left')}: 8px;
+  }
+
+  & svg {
+    color: ${({ colorScheme }) =>
+      getPaletteColor(
+        colorScheme &&
+          ['Light', 'Lightest', 'DarkOnLight'].filter(
+            (darkTheme) => colorScheme.substring(colorScheme.length - darkTheme.length) === darkTheme
+          ).length > 0
+          ? 'text.base'
+          : 'text.lightest'
+      )};
+  }
+        
+  ${mediaQueries[2]} {
+    flex-basis: 24px;
+  }
 `
 
 const genericBannerProps = {
@@ -88,7 +130,24 @@ export interface IGenericBannerProps
   }
   color?: string
   colorScheme?: ColorSchemeName
+  onClose?: () => unknown
+  closeButtonVerticalPosition?: 'top' | 'center'
+  closeButtonHorizontalPosition?: 'left' | 'right'
 }
+
+const getCloseButton = (selfPosition, props) => (
+  <StyledCloseButton
+    className='closeButton'
+    closeButtonVerticalPosition={props.closeButtonVerticalPosition}
+    closeButtonHorizontalPosition={props.closeButtonHorizontalPosition}
+    selfPosition={selfPosition}
+    onClick={props.onClose}
+    data-testid='closeButton'
+    {...props}
+  >
+    {props.closeButtonHorizontalPosition === selfPosition && <CloseButton />}
+  </StyledCloseButton>
+)
 
 const GenericBanner: React.FC<IGenericBannerProps> = ({
   alignItems,
@@ -123,11 +182,13 @@ const GenericBanner: React.FC<IGenericBannerProps> = ({
         iconUsesColorScheme
         // we need to unset Banner's color prop if colorScheme is provided so it doesn't render its own icon
         color={!props.colorScheme ? props.color : null}
+        onClose={undefined}
       >
         <Flex alignItems={alignItems} justifyContent={justifyContent}>
+          {props.onClose && getCloseButton('left', props)}
           {!!iconLeft && iconLeft}
           {!!imageLeft && imageLeft}
-          <Box px={2} fontSize={fontSize}>
+          <BannerContent px={2} fontSize={fontSize}>
             {!!heading &&
               React.cloneElement(heading, {
                 fontSize: heading.props.fontSize || fontSize,
@@ -163,8 +224,9 @@ const GenericBanner: React.FC<IGenericBannerProps> = ({
                 })}
               </CustomButton>
             )}
-          </Box>
+          </BannerContent>
           {!!iconRight && iconRight}
+          {props.onClose && getCloseButton('right', props)}
         </Flex>
       </BannerWithRadius>
     </Relative>
@@ -181,6 +243,8 @@ GenericBanner.defaultProps = {
   linkColor: 'primary',
   linkVariation: 'link',
   borderRadius: '6px',
+  closeButtonVerticalPosition: 'top',
+  closeButtonHorizontalPosition: 'right',
 }
 
 export default GenericBanner
